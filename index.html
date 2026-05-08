@@ -22,7 +22,7 @@
     </div>
     <ul class="nav-links">
       <li class="nav-item active" data-page="dashboard"><span class="nav-icon">◈</span> Dashboard</li>
-      <li class="nav-item" data-page="upload"><span class="nav-icon">⬆</span> Upload Log</li>
+
       <li class="nav-item" data-page="employees"><span class="nav-icon">◉</span> Employees</li>
       <li class="nav-item" data-page="warnings"><span class="nav-icon">⚠</span> Warnings</li>
       <li class="nav-item" data-page="config"><span class="nav-icon">⚙</span> Config</li>
@@ -125,41 +125,7 @@
       </div>
     </section>
 
-    <!-- ========== PAGE: UPLOAD ========== -->
-    <section class="page" id="page-upload">
-      <header class="page-header">
-        <div>
-          <h1 class="page-title">Upload <em>Attendance Log</em></h1>
-          <p class="page-sub">Drop your biometric Excel export here to trigger the pipeline</p>
-        </div>
-      </header>
 
-      <div class="upload-zone" id="uploadZone">
-        <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" hidden />
-        <div class="upload-icon">⬆</div>
-        <div class="upload-title">Drop Excel / CSV file here</div>
-        <div class="upload-sub">or click to browse · .xlsx, .xls, .csv accepted</div>
-        <button class="btn-primary mt-3" onclick="document.getElementById('fileInput').click()">Choose File</button>
-      </div>
-
-      <div class="card mt-4" id="uploadStatus" style="display:none">
-        <div class="card-header"><span>Pipeline Status</span></div>
-        <div class="pipeline-steps" id="pipelineSteps"></div>
-      </div>
-
-      <div class="card mt-4">
-        <div class="card-header"><span>n8n Webhook Config</span><span class="tag">Required</span></div>
-        <div class="config-form">
-          <label>Webhook URL</label>
-          <div class="input-row">
-            <input type="text" id="webhookUrl" placeholder="https://your-n8n.cloud/webhook/attendance" />
-            <button class="btn-secondary" onclick="saveWebhook()">Save</button>
-          </div>
-          <p class="hint">Set this to your n8n Webhook Trigger URL. The upload will POST the file directly to this
-            endpoint.</p>
-        </div>
-      </div>
-    </section>
 
     <!-- ========== PAGE: EMPLOYEES ========== -->
     <section class="page" id="page-employees">

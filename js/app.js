@@ -22,7 +22,7 @@ const state = {
 document.addEventListener('DOMContentLoaded', () => {
   loadConfig();
   setupNav();
-  setupUploadZone();
+  // setupUploadZone();
   updateDateTime();
   setInterval(updateDateTime, 60000);
   refreshDashboard(); // Try loading processed data or fallback to mock
