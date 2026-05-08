@@ -50,20 +50,28 @@ function updateDateTime() {
   document.getElementById('currentMonth').textContent =
     now.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
   document.getElementById('lastRefresh').textContent =
-    'Refreshed ' + now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+    'Refreshed ' + now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 }
 
 // ---- AUTO REFRESH ----
 function startAutoRefresh() {
   if (state.autoRefreshTimer) clearInterval(state.autoRefreshTimer);
   state.autoRefreshTimer = setInterval(() => {
-    if (state.config.dataUrl) fetchDashboardData();
-  }, 60000); // every 60s per spec
+    refreshDashboard();
+  }, 10000); // Refresh every 10 seconds for real-time updates
 }
 
 // ---- FETCH LIVE DATA FROM n8n ----
 async function refreshDashboard() {
   if (!state.config.dataUrl) {
+    try {
+      showToast('Fetching from Google Sheets...', 'info');
+      await fetchFromGoogleSheets();
+      return;
+    } catch (e) {
+      console.log('Failed to fetch from Google Sheets:', e);
+    }
+    
     try {
       const res = await fetch('processed_data.json');
       if (res.ok) {
@@ -84,6 +92,142 @@ async function refreshDashboard() {
     return;
   }
   await fetchDashboardData();
+}
+
+async function fetchFromGoogleSheets() {
+  const sheet1_url = "https://docs.google.com/spreadsheets/d/1yzJiY6ghIcSfvIl6e8sTtbM51nfac3X4jFZvJZdtZaA/export?format=csv&gid=0&t=" + new Date().getTime();
+  const processed_url = "https://docs.google.com/spreadsheets/d/1yzJiY6ghIcSfvIl6e8sTtbM51nfac3X4jFZvJZdtZaA/export?format=csv&gid=1386553414&t=" + new Date().getTime();
+
+  const [res1, res2] = await Promise.all([
+    fetch(sheet1_url),
+    fetch(processed_url)
+  ]);
+
+  if (!res1.ok || !res2.ok) {
+    throw new Error('Failed to fetch sheets');
+  }
+
+  const csv1 = await res1.text();
+  const csv2 = await res2.text();
+
+  const df_sheet1 = parseCSV(csv1);
+  const df_processed = parseCSV(csv2);
+
+  // Process Employees
+  const employees_list = [];
+  df_sheet1.forEach(row => {
+    const emp_id = row['Employee ID'];
+    if (!emp_id) return;
+    
+    const emp_processed = df_processed.filter(r => r['Employee ID'] === emp_id && r['Is Late'] === 'Yes');
+    
+    let last_warning = null;
+    if (emp_processed.length > 0) {
+      last_warning = emp_processed.reduce((max, r) => r['Date'] > max ? r['Date'] : max, emp_processed[0]['Date']);
+    }
+
+    employees_list.push({
+      "employeeId": emp_id,
+      "name": row['Employee Name'] || '',
+      "lateCount": parseInt(row['Strike Count']) || 0,
+      "lastWarningDate": last_warning,
+      "month": "May 2026"
+    });
+  });
+
+  // Process Today's Records
+  const today_records = [];
+  const today = new Date().toISOString().split('T')[0];
+  df_sheet1.forEach(row => {
+    const emp_id = row['Employee ID'];
+    if (!emp_id) return;
+
+    const check_in = row['Check-in Time'];
+    let is_late_flag = "NO";
+    if (check_in && check_in !== '—') {
+      try {
+        const t_obj = new Date('1970-01-01 ' + check_in);
+        const threshold = new Date('1970-01-01 11:00:00');
+        if (t_obj > threshold) {
+          is_late_flag = "YES";
+        }
+      } catch (e) {
+        console.error('Time parse error:', e);
+      }
+    }
+
+    today_records.push({
+      "employeeId": emp_id,
+      "name": row['Employee Name'] || '',
+      "date": today,
+      "checkIn": check_in || "—",
+      "checkOut": row['Check-out Time'] || "—",
+      "lateFlag": is_late_flag
+    });
+  });
+
+  // Process Warnings
+  const warnings = [];
+  const warn_df = df_processed.filter(r => r['Action Taken'] === 'Warning Sent');
+  warn_df.forEach(row => {
+    const lc = parseInt(row['Strike Count']) || 1;
+    const level = Math.min(lc, 4);
+    let msg = "";
+    if (level === 1) msg = "Friendly Reminder: You were late.";
+    else if (level === 2) msg = "Serious Warning: Second late arrival.";
+    else if (level === 3) msg = "Final Warning + HR Meeting: Third late arrival.";
+    else msg = "Manager Escalation: 4 or more late arrivals.";
+
+    warnings.push({
+      "dateSent": row['Date'] || '',
+      "employeeName": row['Employee Name'] || '',
+      "strikeLevel": level,
+      "emailPreview": msg,
+      "calendarLink": level >= 3 ? "#" : null
+    });
+  });
+
+  // Process Trend
+  const trend_map = {};
+  df_processed.forEach(row => {
+    if (row['Is Late'] === 'Yes') {
+      const date = row['Date'];
+      if (date) {
+        trend_map[date] = (trend_map[date] || 0) + 1;
+      }
+    }
+  });
+
+  const trend = Object.keys(trend_map).map(date => ({
+    date: date,
+    count: trend_map[date]
+  })).sort((a, b) => a.date.localeCompare(b.date)).slice(-7);
+
+  state.employees = employees_list;
+  state.todayRecords = today_records;
+  state.warnings = warnings;
+  state.trendData = trend;
+
+  renderAll();
+  updateDateTime();
+  showToast('Data synced from Google Sheets!', 'success');
+}
+
+function parseCSV(csvText) {
+  const lines = csvText.split('\n');
+  if (lines.length === 0) return [];
+  const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+  const result = [];
+  for (let i = 1; i < lines.length; i++) {
+    if (!lines[i].trim()) continue;
+    const obj = {};
+    const currentline = lines[i].split(',').map(v => v.trim().replace(/^"|"$/g, ''));
+    for (let j = 0; j < headers.length; j++) {
+      obj[headers[j]] = currentline[j] || '';
+    }
+    result.push(obj);
+  }
+  return result;
 }
 
 async function fetchDashboardData() {
