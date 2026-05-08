@@ -22,7 +22,7 @@ const state = {
 document.addEventListener('DOMContentLoaded', () => {
   loadConfig();
   setupNav();
-  // setupUploadZone();
+  setupUploadZone();
   updateDateTime();
   setInterval(updateDateTime, 60000);
   refreshDashboard(); // Try loading processed data or fallback to mock
@@ -355,8 +355,7 @@ function renderTodayTable() {
         <td><span class="badge badge-${r.lateFlag === 'YES' ? 'late' : 'ontime'}">${r.lateFlag === 'YES' ? 'LATE' : 'ON TIME'}</span></td>
         <td>${renderStrikeDots(strikes)}</td>
         <td>
-          <button class="btn-secondary btn-sm" onclick="openEditModal('${r.employeeId}')">Edit</button>
-          ${r.lateFlag === 'YES' ? `<button class="btn-secondary btn-sm" onclick="openExcuseModal('${r.employeeId}','${r.name}','${r.date}')">Excuse</button>` : ''}
+          ${r.lateFlag === 'YES' ? `<button class="btn-secondary btn-sm" onclick="openExcuseModal('${r.employeeId}','${r.name}','${r.date}')">Excuse</button>` : '—'}
         </td>
       </tr>
     `;
@@ -643,86 +642,6 @@ async function submitExcuse() {
   closeModal();
   showToast(`${excuseData.name} marked as Excused`, 'success');
   renderTodayTable();
-}
-
-// ---- EDIT MODAL ----
-function openEditModal(empId) {
-  const emp = state.todayRecords.find(r => r.employeeId === empId);
-  const empInfo = state.employees.find(e => e.employeeId === empId);
-  if (!emp) return;
-  
-  document.getElementById('editEmpName').textContent = emp.name;
-  document.getElementById('editEmpId').value = empId;
-  document.getElementById('editCheckIn').value = emp.checkIn !== '—' ? emp.checkIn : '';
-  document.getElementById('editCheckOut').value = emp.checkOut !== '—' ? emp.checkOut : '';
-  document.getElementById('editStrikes').value = empInfo ? empInfo.lateCount : 0;
-  
-  document.getElementById('editModal').style.display = 'flex';
-}
-
-function closeEditModal() {
-  document.getElementById('editModal').style.display = 'none';
-}
-
-async function submitEdit() {
-  const empId = document.getElementById('editEmpId').value;
-  const checkIn = document.getElementById('editCheckIn').value.trim();
-  const checkOut = document.getElementById('editCheckOut').value.trim();
-  const strikes = document.getElementById('editStrikes').value.trim();
-  
-  const payload = {
-    employeeId: empId,
-    checkIn: checkIn,
-    checkOut: checkOut,
-    strikes: strikes,
-    updatedAt: new Date().toISOString()
-  };
-  
-  let url = state.config.overrideUrl;
-  if (!url) {
-    showToast('No Override URL configured in Config. Saving locally only.', 'warning');
-  } else {
-    try {
-      showToast('Sending update...', 'info');
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      showToast('Update sent successfully!', 'success');
-    } catch (e) {
-      showToast('Failed to send update: ' + e.message, 'error');
-      console.error(e);
-    }
-  }
-  
-  // Update local state
-  const rec = state.todayRecords.find(r => r.employeeId === empId);
-  if (rec) {
-    rec.checkIn = checkIn || '—';
-    rec.checkOut = checkOut || '—';
-    
-    let is_late_flag = "NO";
-    if (checkIn && checkIn !== '—') {
-      try {
-        const t_obj = new Date('1970-01-01 ' + checkIn);
-        const threshold = new Date('1970-01-01 11:00:00');
-        if (t_obj > threshold) {
-          is_late_flag = "YES";
-        }
-      } catch (e) {}
-    }
-    rec.lateFlag = is_late_flag;
-  }
-  
-  const empInfo = state.employees.find(e => e.employeeId === empId);
-  if (empInfo) {
-    empInfo.lateCount = parseInt(strikes) || 0;
-  }
-  
-  closeEditModal();
-  renderAll();
 }
 
 // ---- CONFIG ----
