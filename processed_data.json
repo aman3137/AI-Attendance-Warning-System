@@ -1,0 +1,379 @@
+{
+  "employees": [
+    {
+      "employeeId": "EMP001",
+      "name": "Aman Sharma",
+      "lateCount": 0,
+      "lastWarningDate": "2026-05-08",
+      "month": "May 2026"
+    },
+    {
+      "employeeId": "EMP002",
+      "name": "Priya Mehta",
+      "lateCount": 0,
+      "lastWarningDate": null,
+      "month": "May 2026"
+    },
+    {
+      "employeeId": "EMP003",
+      "name": "Rahul Verma",
+      "lateCount": 1,
+      "lastWarningDate": "2026-05-08",
+      "month": "May 2026"
+    },
+    {
+      "employeeId": "EMP004",
+      "name": "Sneha Kapoor",
+      "lateCount": 0,
+      "lastWarningDate": null,
+      "month": "May 2026"
+    },
+    {
+      "employeeId": "EMP005",
+      "name": "Arjun Singh",
+      "lateCount": 2,
+      "lastWarningDate": "2026-05-08",
+      "month": "May 2026"
+    },
+    {
+      "employeeId": "EMP006",
+      "name": "Divya Nair",
+      "lateCount": 0,
+      "lastWarningDate": null,
+      "month": "May 2026"
+    },
+    {
+      "employeeId": "EMP007",
+      "name": "Vikram Joshi",
+      "lateCount": 3,
+      "lastWarningDate": "2026-05-08",
+      "month": "May 2026"
+    },
+    {
+      "employeeId": "EMP008",
+      "name": "Pooja Gupta",
+      "lateCount": 0,
+      "lastWarningDate": null,
+      "month": "May 2026"
+    },
+    {
+      "employeeId": "EMP009",
+      "name": "Karan Malhotra",
+      "lateCount": 1,
+      "lastWarningDate": "2026-05-08",
+      "month": "May 2026"
+    },
+    {
+      "employeeId": "EMP010",
+      "name": "Anita Desai",
+      "lateCount": 0,
+      "lastWarningDate": null,
+      "month": "May 2026"
+    },
+    {
+      "employeeId": "EMP011",
+      "name": "Rohit Bansal",
+      "lateCount": 4,
+      "lastWarningDate": null,
+      "month": "May 2026"
+    },
+    {
+      "employeeId": "EMP012",
+      "name": "Meera Pillai",
+      "lateCount": 0,
+      "lastWarningDate": null,
+      "month": "May 2026"
+    },
+    {
+      "employeeId": "EMP013",
+      "name": "Suresh Yadav",
+      "lateCount": 0,
+      "lastWarningDate": null,
+      "month": "May 2026"
+    },
+    {
+      "employeeId": "EMP014",
+      "name": "Neha Agarwal",
+      "lateCount": 0,
+      "lastWarningDate": null,
+      "month": "May 2026"
+    },
+    {
+      "employeeId": "EMP015",
+      "name": "Amit Tiwari",
+      "lateCount": 1,
+      "lastWarningDate": null,
+      "month": "May 2026"
+    }
+  ],
+  "todayRecords": [
+    {
+      "employeeId": "EMP001",
+      "name": "Aman Sharma",
+      "date": "2026-05-08",
+      "checkIn": "11:45:00",
+      "checkOut": "19:00:00",
+      "lateFlag": "YES"
+    },
+    {
+      "employeeId": "EMP002",
+      "name": "Priya Mehta",
+      "date": "2026-05-08",
+      "checkIn": "9:55:00",
+      "checkOut": "18:30:00",
+      "lateFlag": "NO"
+    },
+    {
+      "employeeId": "EMP003",
+      "name": "Rahul Verma",
+      "date": "2026-05-08",
+      "checkIn": "12:10:00",
+      "checkOut": "19:15:00",
+      "lateFlag": "YES"
+    },
+    {
+      "employeeId": "EMP004",
+      "name": "Sneha Kapoor",
+      "date": "2026-05-08",
+      "checkIn": "10:50:00",
+      "checkOut": "18:45:00",
+      "lateFlag": "NO"
+    },
+    {
+      "employeeId": "EMP005",
+      "name": "Arjun Singh",
+      "date": "2026-05-08",
+      "checkIn": "11:05:00",
+      "checkOut": "19:30:00",
+      "lateFlag": "YES"
+    },
+    {
+      "employeeId": "EMP006",
+      "name": "Divya Nair",
+      "date": "2026-05-08",
+      "checkIn": "8:30:00",
+      "checkOut": "17:00:00",
+      "lateFlag": "NO"
+    },
+    {
+      "employeeId": "EMP007",
+      "name": "Vikram Joshi",
+      "date": "2026-05-08",
+      "checkIn": "13:00:00",
+      "checkOut": "20:00:00",
+      "lateFlag": "YES"
+    },
+    {
+      "employeeId": "EMP008",
+      "name": "Pooja Gupta",
+      "date": "2026-05-08",
+      "checkIn": "10:00:00",
+      "checkOut": "18:00:00",
+      "lateFlag": "NO"
+    },
+    {
+      "employeeId": "EMP009",
+      "name": "Karan Malhotra",
+      "date": "2026-05-08",
+      "checkIn": "11:30:00",
+      "checkOut": "19:00:00",
+      "lateFlag": "YES"
+    },
+    {
+      "employeeId": "EMP010",
+      "name": "Anita Desai",
+      "date": "2026-05-08",
+      "checkIn": "9:15:00",
+      "checkOut": "17:30:00",
+      "lateFlag": "NO"
+    },
+    {
+      "employeeId": "EMP011",
+      "name": "Rohit Bansal",
+      "date": "2026-05-08",
+      "checkIn": "11:55:00",
+      "checkOut": "20:00:00",
+      "lateFlag": "YES"
+    },
+    {
+      "employeeId": "EMP012",
+      "name": "Meera Pillai",
+      "date": "2026-05-08",
+      "checkIn": "10:30:00",
+      "checkOut": "18:30:00",
+      "lateFlag": "NO"
+    },
+    {
+      "employeeId": "EMP013",
+      "name": "Suresh Yadav",
+      "date": "2026-05-08",
+      "checkIn": "12:45:00",
+      "checkOut": "19:45:00",
+      "lateFlag": "YES"
+    },
+    {
+      "employeeId": "EMP014",
+      "name": "Neha Agarwal",
+      "date": "2026-05-08",
+      "checkIn": "9:00:00",
+      "checkOut": "17:00:00",
+      "lateFlag": "NO"
+    },
+    {
+      "employeeId": "EMP015",
+      "name": "Amit Tiwari",
+      "date": "2026-05-08",
+      "checkIn": "11:20:00",
+      "checkOut": "19:00:00",
+      "lateFlag": "YES"
+    }
+  ],
+  "warnings": [
+    {
+      "dateSent": "2026-05-08",
+      "employeeName": "Aman Sharma",
+      "strikeLevel": 1,
+      "emailPreview": "Friendly Reminder: You were late.",
+      "calendarLink": null
+    },
+    {
+      "dateSent": "2026-05-08",
+      "employeeName": "Rahul Verma",
+      "strikeLevel": 2,
+      "emailPreview": "Serious Warning: Second late arrival.",
+      "calendarLink": null
+    },
+    {
+      "dateSent": "2026-05-08",
+      "employeeName": "Arjun Singh",
+      "strikeLevel": 3,
+      "emailPreview": "Final Warning + HR Meeting: Third late arrival.",
+      "calendarLink": "#"
+    },
+    {
+      "dateSent": "2026-05-08",
+      "employeeName": "Vikram Joshi",
+      "strikeLevel": 3,
+      "emailPreview": "Final Warning + HR Meeting: Third late arrival.",
+      "calendarLink": "#"
+    },
+    {
+      "dateSent": "2026-05-08",
+      "employeeName": "Karan Malhotra",
+      "strikeLevel": 2,
+      "emailPreview": "Serious Warning: Second late arrival.",
+      "calendarLink": null
+    },
+    {
+      "dateSent": "2026-05-08",
+      "employeeName": "Aman Sharma",
+      "strikeLevel": 1,
+      "emailPreview": "Friendly Reminder: You were late.",
+      "calendarLink": null
+    },
+    {
+      "dateSent": "2026-05-08",
+      "employeeName": "Rahul Verma",
+      "strikeLevel": 2,
+      "emailPreview": "Serious Warning: Second late arrival.",
+      "calendarLink": null
+    },
+    {
+      "dateSent": "2026-05-08",
+      "employeeName": "Arjun Singh",
+      "strikeLevel": 3,
+      "emailPreview": "Final Warning + HR Meeting: Third late arrival.",
+      "calendarLink": "#"
+    },
+    {
+      "dateSent": "2026-05-08",
+      "employeeName": "Vikram Joshi",
+      "strikeLevel": 3,
+      "emailPreview": "Final Warning + HR Meeting: Third late arrival.",
+      "calendarLink": "#"
+    },
+    {
+      "dateSent": "2026-05-08",
+      "employeeName": "Karan Malhotra",
+      "strikeLevel": 2,
+      "emailPreview": "Serious Warning: Second late arrival.",
+      "calendarLink": null
+    },
+    {
+      "dateSent": "2026-05-08",
+      "employeeName": "Aman Sharma",
+      "strikeLevel": 1,
+      "emailPreview": "Friendly Reminder: You were late.",
+      "calendarLink": null
+    },
+    {
+      "dateSent": "2026-05-08",
+      "employeeName": "Rahul Verma",
+      "strikeLevel": 2,
+      "emailPreview": "Serious Warning: Second late arrival.",
+      "calendarLink": null
+    },
+    {
+      "dateSent": "2026-05-08",
+      "employeeName": "Arjun Singh",
+      "strikeLevel": 3,
+      "emailPreview": "Final Warning + HR Meeting: Third late arrival.",
+      "calendarLink": "#"
+    },
+    {
+      "dateSent": "2026-05-08",
+      "employeeName": "Vikram Joshi",
+      "strikeLevel": 3,
+      "emailPreview": "Final Warning + HR Meeting: Third late arrival.",
+      "calendarLink": "#"
+    },
+    {
+      "dateSent": "2026-05-08",
+      "employeeName": "Karan Malhotra",
+      "strikeLevel": 2,
+      "emailPreview": "Serious Warning: Second late arrival.",
+      "calendarLink": null
+    },
+    {
+      "dateSent": "2026-05-08",
+      "employeeName": "Aman Sharma",
+      "strikeLevel": 1,
+      "emailPreview": "Friendly Reminder: You were late.",
+      "calendarLink": null
+    },
+    {
+      "dateSent": "2026-05-08",
+      "employeeName": "Rahul Verma",
+      "strikeLevel": 2,
+      "emailPreview": "Serious Warning: Second late arrival.",
+      "calendarLink": null
+    },
+    {
+      "dateSent": "2026-05-08",
+      "employeeName": "Arjun Singh",
+      "strikeLevel": 3,
+      "emailPreview": "Final Warning + HR Meeting: Third late arrival.",
+      "calendarLink": "#"
+    },
+    {
+      "dateSent": "2026-05-08",
+      "employeeName": "Vikram Joshi",
+      "strikeLevel": 3,
+      "emailPreview": "Final Warning + HR Meeting: Third late arrival.",
+      "calendarLink": "#"
+    },
+    {
+      "dateSent": "2026-05-08",
+      "employeeName": "Karan Malhotra",
+      "strikeLevel": 2,
+      "emailPreview": "Serious Warning: Second late arrival.",
+      "calendarLink": null
+    }
+  ],
+  "trend": [
+    {
+      "date": "2026-05-08",
+      "count": 20
+    }
+  ]
+}

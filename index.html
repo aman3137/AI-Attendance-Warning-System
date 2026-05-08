@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Automate HR · Attendance Intelligence</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+
+<body>
+
+  <!-- SIDEBAR NAV -->
+  <nav class="sidebar">
+    <div class="sidebar-brand">
+      <span class="brand-dot"></span>
+      <span class="brand-name">automate<span class="brand-hr">HR</span></span>
+    </div>
+    <ul class="nav-links">
+      <li class="nav-item active" data-page="dashboard"><span class="nav-icon">◈</span> Dashboard</li>
+      <li class="nav-item" data-page="upload"><span class="nav-icon">⬆</span> Upload Log</li>
+      <li class="nav-item" data-page="employees"><span class="nav-icon">◉</span> Employees</li>
+      <li class="nav-item" data-page="warnings"><span class="nav-icon">⚠</span> Warnings</li>
+      <li class="nav-item" data-page="config"><span class="nav-icon">⚙</span> Config</li>
+    </ul>
+    <div class="sidebar-footer">
+      <div class="live-indicator"><span class="pulse"></span> Live Sync</div>
+      <div class="last-refresh" id="lastRefresh">—</div>
+    </div>
+  </nav>
+
+  <!-- MAIN CONTENT -->
+  <main class="main-content">
+
+    <!-- ========== PAGE: DASHBOARD ========== -->
+    <section class="page active" id="page-dashboard">
+      <header class="page-header">
+        <div>
+          <h1 class="page-title">Attendance <em>Intelligence</em></h1>
+          <p class="page-sub" id="todayDate">Loading date...</p>
+        </div>
+        <div class="header-actions">
+          <button class="btn-refresh" onclick="refreshDashboard()">↻ Refresh</button>
+          <div class="month-badge" id="currentMonth">—</div>
+        </div>
+      </header>
+
+      <!-- KPI CARDS -->
+      <div class="kpi-grid">
+        <div class="kpi-card kpi-late">
+          <div class="kpi-label">Late Today</div>
+          <div class="kpi-value" id="kpiLate">—</div>
+          <div class="kpi-sub">arrivals after 11:00 AM</div>
+        </div>
+        <div class="kpi-card kpi-ontime">
+          <div class="kpi-label">On Time</div>
+          <div class="kpi-value" id="kpiOnTime">—</div>
+          <div class="kpi-sub">checked in before 11 AM</div>
+        </div>
+        <div class="kpi-card kpi-critical">
+          <div class="kpi-label">Critical ⚑</div>
+          <div class="kpi-value" id="kpiCritical">—</div>
+          <div class="kpi-sub">employees at 3rd strike</div>
+        </div>
+        <div class="kpi-card kpi-atrisk">
+          <div class="kpi-label">At Risk</div>
+          <div class="kpi-value" id="kpiAtRisk">—</div>
+          <div class="kpi-sub">employees at 2 strikes</div>
+        </div>
+      </div>
+
+      <!-- STRIKE LEADERBOARD + CHART -->
+      <div class="two-col">
+        <div class="card">
+          <div class="card-header">
+            <span>Strike Leaderboard</span>
+            <span class="tag">This Month</span>
+          </div>
+          <div class="leaderboard" id="leaderboard">
+            <div class="empty-state">No data loaded</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <span>Late Arrival Trend</span>
+            <span class="tag">Last 7 days</span>
+          </div>
+          <div class="chart-wrap">
+            <canvas id="trendChart" width="400" height="220"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- TODAY'S LOG TABLE -->
+      <div class="card mt-4">
+        <div class="card-header">
+          <span>Today's Processed Records</span>
+          <span class="tag" id="recordCount">0 records</span>
+        </div>
+        <div class="table-wrap">
+          <table class="data-table" id="todayTable">
+            <thead>
+              <tr>
+                <th>Employee ID</th>
+                <th>Name</th>
+                <th>Check-In</th>
+                <th>Check-Out</th>
+                <th>Status</th>
+                <th>Strikes</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="todayTbody">
+              <tr>
+                <td colspan="7" class="empty-state">No records yet. Upload a log to begin.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== PAGE: UPLOAD ========== -->
+    <section class="page" id="page-upload">
+      <header class="page-header">
+        <div>
+          <h1 class="page-title">Upload <em>Attendance Log</em></h1>
+          <p class="page-sub">Drop your biometric Excel export here to trigger the pipeline</p>
+        </div>
+      </header>
+
+      <div class="upload-zone" id="uploadZone">
+        <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" hidden />
+        <div class="upload-icon">⬆</div>
+        <div class="upload-title">Drop Excel / CSV file here</div>
+        <div class="upload-sub">or click to browse · .xlsx, .xls, .csv accepted</div>
+        <button class="btn-primary mt-3" onclick="document.getElementById('fileInput').click()">Choose File</button>
+      </div>
+
+      <div class="card mt-4" id="uploadStatus" style="display:none">
+        <div class="card-header"><span>Pipeline Status</span></div>
+        <div class="pipeline-steps" id="pipelineSteps"></div>
+      </div>
+
+      <div class="card mt-4">
+        <div class="card-header"><span>n8n Webhook Config</span><span class="tag">Required</span></div>
+        <div class="config-form">
+          <label>Webhook URL</label>
+          <div class="input-row">
+            <input type="text" id="webhookUrl" placeholder="https://your-n8n.cloud/webhook/attendance" />
+            <button class="btn-secondary" onclick="saveWebhook()">Save</button>
+          </div>
+          <p class="hint">Set this to your n8n Webhook Trigger URL. The upload will POST the file directly to this
+            endpoint.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== PAGE: EMPLOYEES ========== -->
+    <section class="page" id="page-employees">
+      <header class="page-header">
+        <div>
+          <h1 class="page-title">Employee <em>Strike Tracker</em></h1>
+          <p class="page-sub">Monthly late count per employee</p>
+        </div>
+        <input type="text" class="search-input" placeholder="Search employee..." id="empSearch"
+          oninput="filterEmployees()" />
+      </header>
+
+      <div class="card">
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Employee ID</th>
+                <th>Name</th>
+                <th>Monthly Late Count</th>
+                <th>Last Warning</th>
+                <th>Month</th>
+                <th>Status Badge</th>
+                <th>Override</th>
+              </tr>
+            </thead>
+            <tbody id="empTbody">
+              <tr>
+                <td colspan="7" class="empty-state">Load data via Dashboard refresh</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== PAGE: WARNINGS ========== -->
+    <section class="page" id="page-warnings">
+      <header class="page-header">
+        <div>
+          <h1 class="page-title">Warning <em>History</em></h1>
+          <p class="page-sub">All AI-generated warning emails sent this month</p>
+        </div>
+      </header>
+
+      <div class="card">
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Date Sent</th>
+                <th>Employee</th>
+                <th>Strike Level</th>
+                <th>Email Preview</th>
+                <th>Calendar</th>
+              </tr>
+            </thead>
+            <tbody id="warningTbody">
+              <tr>
+                <td colspan="5" class="empty-state">No warnings logged yet</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== PAGE: CONFIG ========== -->
+    <section class="page" id="page-config">
+      <header class="page-header">
+        <div>
+          <h1 class="page-title">System <em>Configuration</em></h1>
+          <p class="page-sub">Connect your n8n endpoints and Google Sheets</p>
+        </div>
+      </header>
+
+      <div class="two-col">
+        <div class="card">
+          <div class="card-header"><span>n8n Endpoints</span></div>
+          <div class="config-form">
+            <label>Webhook Trigger URL</label>
+            <input type="text" id="cfgWebhook" placeholder="https://n8n.cloud/webhook/attendance-upload" />
+
+            <label>Dashboard Data URL <span class="hint-inline">(GET employees)</span></label>
+            <input type="text" id="cfgDataUrl" placeholder="https://n8n.cloud/webhook/get-dashboard" />
+
+            <label>Manual Override URL</label>
+            <input type="text" id="cfgOverrideUrl" placeholder="https://n8n.cloud/webhook/excuse-late" />
+
+            <button class="btn-primary mt-3" onclick="saveConfig()">Save Configuration</button>
+            <p class="hint" id="configSaveMsg"></p>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><span>Connection Test</span></div>
+          <div class="config-form">
+            <p class="hint">Test your n8n webhook connections before going live.</p>
+            <button class="btn-secondary" onclick="testWebhook('webhook')">Test Webhook</button>
+            <button class="btn-secondary mt-2" onclick="testWebhook('data')">Test Data Endpoint</button>
+            <div id="testResults" class="test-results mt-3"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card mt-4">
+        <div class="card-header"><span>Sample Data Mode</span><span class="tag">Demo</span></div>
+        <div class="config-form">
+          <p class="hint">No n8n connected yet? Load mock data to preview the dashboard UI.</p>
+          <button class="btn-primary" onclick="loadMockData()">⚡ Load Mock Data</button>
+          <button class="btn-secondary ml-2" onclick="clearData()">Clear All Data</button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- MODAL: Excuse Override -->
+  <div class="modal-overlay" id="excuseModal" style="display:none">
+    <div class="modal">
+      <div class="modal-header">
+        <span>Mark as Excused</span>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <p>Employee: <strong id="excuseEmpName">—</strong></p>
+        <p>Date: <strong id="excuseDate">—</strong></p>
+        <label>Reason for excuse</label>
+        <textarea id="excuseReason" placeholder="Medical appointment, emergency leave..."></textarea>
+        <button class="btn-primary mt-3" onclick="submitExcuse()">Submit Override</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/processed_data.js"></script>
+  <script src="js/app.js"></script>
+</body>
+
+</html>

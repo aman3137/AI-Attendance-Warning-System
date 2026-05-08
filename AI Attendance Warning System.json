@@ -1,0 +1,725 @@
+{
+  "name": "AI Attendance Warning System",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 11 * * 1-5"
+            }
+          ]
+        }
+      },
+      "id": "8d6dd354-b520-4c07-8299-702854ba532a",
+      "name": "Daily Attendance Check",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -1408,
+        240
+      ],
+      "notes": "Runs daily at 11:00 AM on weekdays"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1yzJiY6ghIcSfvIl6e8sTtbM51nfac3X4jFZvJZdtZaA/edit?usp=sharing",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1yzJiY6ghIcSfvIl6e8sTtbM51nfac3X4jFZvJZdtZaA/edit#gid=0"
+        },
+        "options": {}
+      },
+      "id": "31a3743f-3138-432e-b51a-15d9d7dc681b",
+      "name": "Fetch Raw Attendance Data",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        -1184,
+        240
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "rZ4oBhp6jvqneNlM",
+          "name": "Google Sheets OAuth2 API"
+        }
+      },
+      "notes": "Reads attendance records from AI Attendance Warning System sheet"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst results = [];\n\nfor (const item of items) {\n  const row = item.json;\n\n  const employeeId   = row['Employee ID']   || '';\n  const employeeName = row['Employee Name'] || '';\n  const employeeEmail = row['Email']        || '';\n  const managerEmail  = row['Manager Email']|| '';\n  const checkInTime   = row['Check-in Time']  || '';\n  const checkOutTime  = row['Check-out Time'] || '';\n  const strikeCount   = parseInt(row['Strike Count'] || '0', 10);\n  const today         = new Date().toISOString().split('T')[0];\n\n  // Determine late flag: Check-in after 11:00:00\n  let isLate = false;\n  if (checkInTime) {\n    const parts = checkInTime.split(':').map(Number);\n    const totalMins = parts[0] * 60 + (parts[1] || 0);\n    isLate = totalMins > 11 * 60; // 660 minutes = 11:00 AM\n  } else {\n    isLate = true; // No check-in recorded = absent/late\n  }\n\n  results.push({\n    json: {\n      employeeId,\n      employeeName,\n      employeeEmail,\n      managerEmail,\n      checkInTime,\n      checkOutTime,\n      strikeCount,\n      isLate,\n      date: today\n    }\n  });\n}\n\nreturn results;"
+      },
+      "id": "6d5f3657-a677-41b8-89b7-5e82a945b00d",
+      "name": "Process Attendance Records",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -976,
+        240
+      ],
+      "notes": "Calculates Check-in, Check-out & Late Flag for each employee"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "cond-is-late",
+              "leftValue": "={{ $json.isLate }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "d21004b4-e266-47a2-bf78-28f5b238ca49",
+      "name": "Is Employee Late?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -752,
+        240
+      ],
+      "notes": "Late if Check-in > 11:00:00"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const data = $input.item.json;\n\nconst newStrikeCount = (data.strikeCount || 0) + 1;\n\nconst strikeLabel =\n  newStrikeCount === 1 ? 'Friendly Reminder' :\n  newStrikeCount === 2 ? 'Serious Warning' :\n  newStrikeCount === 3 ? 'Final Warning + HR Meeting' :\n                         'Manager Escalation';\n\nreturn {\n  json: {\n    ...data,\n    newStrikeCount,\n    strikeLabel\n  }\n};"
+      },
+      "id": "99ae65bb-a437-41ec-8851-cddc98ba1adb",
+      "name": "Calculate New Strike Count",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -528,
+        128
+      ],
+      "notes": "Increments strike count for each late employee"
+    },
+    {
+      "parameters": {
+        "batchSize": 5,
+        "options": {}
+      },
+      "id": "9a277c85-c3ad-441f-9c74-48ea00247f6f",
+      "name": "Split In Batches",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -208,
+        224
+      ],
+      "notes": "Batch Size = 5 to prevent memory issues — suitable for 1000+ employees"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const data = $input.item.json;\nconst { employeeName, newStrikeCount, date, checkInTime } = data;\n\nlet subject = '';\nlet body    = '';\n\nif (newStrikeCount === 1) {\n  subject = `Friendly Reminder: Late Arrival on ${date}`;\n  body =\n    `Dear ${employeeName},\\n\\n` +\n    `This is a friendly reminder that your check-in was recorded at ${checkInTime} on ${date}, ` +\n    `which is after our 11:00 AM attendance cutoff.\\n\\n` +\n    `We kindly ask you to ensure timely arrival going forward.\\n\\n` +\n    `Best regards,\\nHR Team`;\n\n} else if (newStrikeCount === 2) {\n  subject = `⚠️ Serious Warning: Repeated Late Arrival – ${date}`;\n  body =\n    `Dear ${employeeName},\\n\\n` +\n    `This is a serious warning. This is your 2nd late check-in.\\n\\n` +\n    `Your check-in on ${date} was recorded at ${checkInTime}.\\n\\n` +\n    `Continued tardiness may lead to formal disciplinary action.\\n\\n` +\n    `HR Team`;\n\n} else if (newStrikeCount === 3) {\n  subject = `🚨 Final Warning + HR Meeting Scheduled – ${date}`;\n  body =\n    `Dear ${employeeName},\\n\\n` +\n    `You have received your 3rd late check-in. An HR meeting has been scheduled with you.\\n\\n` +\n    `Date of Incident: ${date}\\n` +\n    `Check-in Time: ${checkInTime}\\n\\n` +\n    `Please treat this as a final warning. Further action will be taken if attendance does not improve.\\n\\n` +\n    `HR Team`;\n\n} else {\n  subject = `🔴 Manager Escalation: Strike ${newStrikeCount} – ${date}`;\n  body =\n    `Dear ${employeeName},\\n\\n` +\n    `Your attendance record has been escalated to your reporting manager. ` +\n    `This is strike number ${newStrikeCount}.\\n\\n` +\n    `Date of Incident: ${date}\\n` +\n    `Check-in Time: ${checkInTime}\\n\\n` +\n    `Your manager will contact you shortly.\\n\\n` +\n    `HR Team`;\n}\n\nreturn {\n  json: {\n    ...data,\n    emailSubject: subject,\n    emailBody: body\n  }\n};"
+      },
+      "id": "ac6c1a30-b108-4c41-ad60-e60bd4c67dce",
+      "name": "Generate Warning Template",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        48,
+        0
+      ],
+      "notes": "Generates email subject & body using static templates (no AI for speed)"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.employeeEmail }}",
+        "subject": "={{ $json.emailSubject }}",
+        "message": "={{ $json.emailBody }}",
+        "options": {}
+      },
+      "id": "cfb4284d-05de-41d9-a3ef-36d3ed31b93c",
+      "name": "Send Warning Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        304,
+        -96
+      ],
+      "webhookId": "82a9fc85-f535-46ea-a7cf-75276d7636dc",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "lCrgQi6pGYlMjoYD",
+          "name": "Gmail OAuth2 API"
+        }
+      },
+      "notes": "Sends warning email to the employee"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "cond-strike-gte-3",
+              "leftValue": "={{ $json.newStrikeCount }}",
+              "rightValue": 3,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "0d871de0-0fd0-4b0e-aa80-9f44152a2b99",
+      "name": "Is Strike >= 3?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        400,
+        400
+      ],
+      "notes": "If strike >= 3 → Escalate to HR"
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "itsaman1110@gmail.com",
+          "mode": "id"
+        },
+        "start": "2026-05-01T00:00:00",
+        "end": "2026-05-31T00:00:00",
+        "additionalFields": {}
+      },
+      "id": "5cf1a1e8-76fa-45c8-8ce6-406f1c0aa2a0",
+      "name": "Create HR Meeting",
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.1,
+      "position": [
+        592,
+        0
+      ],
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "qqbP4ZEPH9yMrchY",
+          "name": "Google Calendar OAuth2 API"
+        }
+      },
+      "notes": "Schedules HR meeting with employee the next business day at 10:00 AM"
+    },
+    {
+      "parameters": {
+        "sendTo": "hr@yourcompany.com",
+        "subject": "=🚨 Escalation Alert: {{ $json.employeeName }} – Strike {{ $json.newStrikeCount }}",
+        "message": "=Dear HR Team,\n\nThis is an automated escalation notification from the AI Attendance Warning System.\n\n━━━━━━━━━━━━━━━━━━━━━━\nEMPLOYEE DETAILS\n━━━━━━━━━━━━━━━━━━━━━━\nName:           {{ $json.employeeName }}\nEmail:          {{ $json.employeeEmail }}\nStrike Count:   {{ $json.newStrikeCount }}\nLatest Incident: {{ $json.date }} at {{ $json.checkInTime }}\n\nAn HR meeting has been automatically scheduled. Please follow up accordingly.\n\nThis message was sent automatically. Do not reply to this email.",
+        "options": {
+          "ccList": "={{ $json.managerEmail }}"
+        }
+      },
+      "id": "a757602e-93b2-41f9-9dd7-23b1b1e7f2b8",
+      "name": "Send Escalation Email to HR",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        816,
+        0
+      ],
+      "webhookId": "299067bb-66eb-4f9c-a15b-2d4949338f17",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "cKrH1uAuUIY6IlTA",
+          "name": "Gmail account"
+        }
+      },
+      "notes": "Notifies HR & Reporting Manager about the escalation"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1yzJiY6ghIcSfvIl6e8sTtbM51nfac3X4jFZvJZdtZaA/edit?usp=sharing",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1yzJiY6ghIcSfvIl6e8sTtbM51nfac3X4jFZvJZdtZaA/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [
+            "Last Action"
+          ],
+          "schema": [
+            {
+              "id": "Employee ID",
+              "displayName": "Employee ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Employee Name",
+              "displayName": "Employee Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Manager Email",
+              "displayName": "Manager Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Check-in Time",
+              "displayName": "Check-in Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Check-out Time",
+              "displayName": "Check-out Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Strike Count",
+              "displayName": "Strike Count",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Last Action",
+              "displayName": "Last Action",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Last Updated",
+              "displayName": "Last Updated",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "3bc8359d-b79d-4a3d-862f-ec7426e727e5",
+      "name": "Update Records",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        1040,
+        0
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "rZ4oBhp6jvqneNlM",
+          "name": "Google Sheets OAuth2 API"
+        }
+      },
+      "notes": "Updates strike count & last action in AI Attendance Warning System sheet"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1yzJiY6ghIcSfvIl6e8sTtbM51nfac3X4jFZvJZdtZaA/edit?usp=sharing",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1386553414,
+          "mode": "list",
+          "cachedResultName": "Processed Records",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1yzJiY6ghIcSfvIl6e8sTtbM51nfac3X4jFZvJZdtZaA/edit#gid=1386553414"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Timestamp": "={{ $now.toISO() }}",
+            "Date": "={{ $json.date }}",
+            "Employee ID": "={{ $json.employeeId }}",
+            "Employee Name": "={{ $json.employeeName }}",
+            "Employee Email": "={{ $json.employeeEmail }}",
+            "Check-in Time": "={{ $json.checkInTime }}",
+            "Is Late": "={{ $json.isLate ? 'Yes' : 'No' }}",
+            "Strike Count": "={{ $json.newStrikeCount }}",
+            "Action Taken": "={{ $json.isLate ? 'Warning Sent' : 'On Time' }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Employee ID",
+              "displayName": "Employee ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Employee Name",
+              "displayName": "Employee Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Employee Email",
+              "displayName": "Employee Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Check-in Time",
+              "displayName": "Check-in Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Is Late",
+              "displayName": "Is Late",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Strike Count",
+              "displayName": "Strike Count",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Action Taken",
+              "displayName": "Action Taken",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "6864777b-98d3-4701-b97e-f1ee27f71fac",
+      "name": "Save to Processed Records",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        784,
+        256
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "rZ4oBhp6jvqneNlM",
+          "name": "Google Sheets OAuth2 API"
+        }
+      },
+      "notes": "Logs all actions with timestamp to Processed Records sheet"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Daily Attendance Check": {
+      "main": [
+        [
+          {
+            "node": "Fetch Raw Attendance Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Raw Attendance Data": {
+      "main": [
+        [
+          {
+            "node": "Process Attendance Records",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Attendance Records": {
+      "main": [
+        [
+          {
+            "node": "Is Employee Late?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Employee Late?": {
+      "main": [
+        [
+          {
+            "node": "Calculate New Strike Count",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Is Strike >= 3?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate New Strike Count": {
+      "main": [
+        [
+          {
+            "node": "Split In Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split In Batches": {
+      "main": [
+        [
+          {
+            "node": "Save to Processed Records",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Create HR Meeting",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Generate Warning Template",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Warning Template": {
+      "main": [
+        [
+          {
+            "node": "Send Warning Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Warning Email": {
+      "main": [
+        [
+          {
+            "node": "Is Strike >= 3?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Strike >= 3?": {
+      "main": [
+        [
+          {
+            "node": "Create HR Meeting",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Split In Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create HR Meeting": {
+      "main": [
+        [
+          {
+            "node": "Send Escalation Email to HR",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Escalation Email to HR": {
+      "main": [
+        [
+          {
+            "node": "Update Records",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Records": {
+      "main": [
+        [
+          {
+            "node": "Split In Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "64fbf744-af8b-41da-b09c-e2321d1e19da",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "1726f04084ac0cff20173a3ff3b70da156bd814b6b22fcf9c1dbbe68e3333ddd"
+  },
+  "id": "mQLW3q9q78CpIREp",
+  "tags": [
+    {
+      "updatedAt": "2026-05-08T07:28:22.935Z",
+      "createdAt": "2026-05-08T07:28:22.935Z",
+      "id": "jfSH9PTH7Vwi3vQ3",
+      "name": "Automation"
+    },
+    {
+      "updatedAt": "2026-05-08T07:28:22.992Z",
+      "createdAt": "2026-05-08T07:28:22.992Z",
+      "id": "zBoqhh5vVqwEimfB",
+      "name": "HR"
+    },
+    {
+      "updatedAt": "2026-05-08T07:28:23.028Z",
+      "createdAt": "2026-05-08T07:28:23.028Z",
+      "id": "zHcdxXCR6atAAGKw",
+      "name": "Attendance"
+    }
+  ]
+}
